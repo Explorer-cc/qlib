@@ -61,6 +61,8 @@ class Rolling:
         test_end: Optional[str] = None,
         task_ext_conf: Optional[dict] = None,
         rolling_exp: Optional[str] = None,
+        rolling_rec_name: Optional[str] = None,
+        recorder_name: Optional[str] = None,
     ) -> None:
         """
         Parameters
@@ -86,7 +88,13 @@ class Rolling:
         rolling_exp : Optional[str]
             The name for the experiments for rolling.
             It will contains a lot of record in an experiment. Each record corresponds to a specific rolling.
-            Please note that it is different from the final experiments
+                Please note that it is different from the final experiments
+        rolling_rec_name : Optional[str]
+            The recorder name for rolling tasks in `rolling_exp` experiment.
+            If provided, all rolling tasks will use the same recorder name (later runs will overwrite earlier ones).
+            If None, each rolling task will have a unique auto-generated name.
+        recorder_name : Optional[str]
+            The recorder name for the final combined result in `exp_name` experiment.
         """
         self.logger = get_module_logger("Rolling")
         self.conf_path = Path(conf_path)
@@ -110,6 +118,8 @@ class Rolling:
         self.test_end = test_end
         self.task_ext_conf = task_ext_conf
         self.h_path = h_path
+        self.rolling_rec_name = rolling_rec_name
+        self.recorder_name = recorder_name
 
         # FIXME:
         # - the qlib_init section will be ignored by me.
@@ -188,7 +198,7 @@ class Rolling:
         """
         task = self.basic_task()
         print(task)
-        trainer = TrainerR(experiment_name=self.exp_name)
+        trainer = TrainerR(experiment_name=self.exp_name, default_rec_name=self.recorder_name)
         trainer([task])
 
     def get_task_list(self) -> List[dict]:
@@ -212,7 +222,7 @@ class Rolling:
             R.delete_exp(experiment_name=self.rolling_exp)  # We should remove the rolling experiments.
         except ValueError:
             self.logger.info("No previous rolling results")
-        trainer = TrainerR(experiment_name=self.rolling_exp)
+        trainer = TrainerR(experiment_name=self.rolling_exp, default_rec_name=self.rolling_rec_name)
         trainer(task_l)
 
     def _ens_rolling(self):
@@ -224,7 +234,10 @@ class Rolling:
             artifacts_path={"pred": "pred.pkl", "label": "label.pkl"},
         )
         res = rc()
-        with R.start(experiment_name=self.exp_name):
+        with R.start(
+            experiment_name=self.exp_name,
+            recorder_name=self.recorder_name
+            ):
             R.log_params(exp_name=self.rolling_exp)
             R.save_objects(**{"pred.pkl": res["pred"], "label.pkl": res["label"]})
             self._rid = R.get_recorder().id

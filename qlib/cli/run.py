@@ -83,7 +83,12 @@ def render_template(config_path: str) -> str:
 
 
 # workflow handler function
-def workflow(config_path, experiment_name="workflow", uri_folder="mlruns"):
+def workflow(
+    config_path, 
+    experiment_name="workflow",
+    uri_folder="mlruns",
+    recorder_name=None,
+    ):
     """
     This is a Qlib CLI entrance.
     User can run the whole Quant research workflow defined by a configure file
@@ -100,6 +105,17 @@ def workflow(config_path, experiment_name="workflow", uri_folder="mlruns"):
             region: cn
         BASE_CONFIG_PATH: "workflow_config_lightgbm_Alpha158_csi500.yaml"
         market: csi300
+        
+    Parameters
+    ----------
+    config_path : str
+        path to the workflow configuration YAML file
+    experiment_name : str
+        name of the experiment (default: "workflow")
+    uri_folder : str
+        path to the MLflow tracking URI (default: "mlruns")
+    recorder_name : str, optional
+        name of the recorder. If not provided, it will be read from the YAML config or auto-generated
 
     """
     # Render the template
@@ -144,7 +160,14 @@ def workflow(config_path, experiment_name="workflow", uri_folder="mlruns"):
 
     if "experiment_name" in config:
         experiment_name = config["experiment_name"]
-    recorder = task_train(config.get("task"), experiment_name=experiment_name)
+
+    if "recorder_name" in config:
+        recorder_name = config["recorder_name"]
+    recorder = task_train(
+        config.get("task"), 
+        experiment_name=experiment_name,
+        recorder_name=recorder_name,
+    )
     recorder.save_objects(config=config)
 
 
