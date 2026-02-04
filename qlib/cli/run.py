@@ -158,10 +158,12 @@ def workflow(
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(os.getcwd()).resolve() / uri_folder)
         qlib.init(**config.get("qlib_init"), exp_manager=exp_manager)
 
-    if "experiment_name" in config:
+    # CLI takes priority over YAML config
+    # Only use YAML value when CLI argument is not provided (using default)
+    if "experiment_name" in config and experiment_name == "workflow":
         experiment_name = config["experiment_name"]
 
-    if "recorder_name" in config:
+    if "recorder_name" in config and recorder_name is None:
         recorder_name = config["recorder_name"]
     recorder = task_train(
         config.get("task"), 
